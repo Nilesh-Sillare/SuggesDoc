@@ -19,6 +19,33 @@ function homeFor(role: string | null | undefined) {
   return role === 'doctor' ? '/doctor/profile' : '/home'
 }
 
+// Shared look for all text inputs
+const inputClass =
+  'w-full px-4 py-3 rounded-xl border border-[#D8D4C8] bg-white/90 text-[#2A2A28] text-sm outline-none transition focus:border-[#3FA9D6] focus:ring-4 focus:ring-[#3FA9D6]/15'
+
+// ============================================================
+// WORDMARK — gradient logo, same style as the home page
+// ============================================================
+function Wordmark({ large = false }: { large?: boolean }) {
+  return (
+    <div className="flex items-center justify-center gap-2.5">
+      <div
+        className={`${
+          large ? 'w-12 h-12' : 'w-10 h-10'
+        } rounded-full bg-gradient-to-br from-[#3FA9D6] to-[#4FBE8E] flex items-center justify-center shadow-md`}
+      >
+        <svg width={large ? 22 : 18} height={large ? 22 : 18} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+          <path d="M3 12h4l2 7 4-14 2 7h6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <h1 className={`font-serif font-bold ${large ? 'text-5xl' : 'text-3xl'}`}>
+        <span className="text-[#3FA9D6]">Suggest</span>
+        <span className="text-[#4FBE8E]">Doc</span>
+      </h1>
+    </div>
+  )
+}
+
 export default function LandingPage() {
   const router = useRouter()
 
@@ -61,7 +88,7 @@ export default function LandingPage() {
   }
 
   // ============================================================
-  // FORM SUBMIT HANDLER
+  // FORM SUBMIT HANDLER (logic unchanged)
   // Handles both Sign Up and Sign In depending on `mode`
   // ============================================================
   async function handleSubmit(e: React.FormEvent) {
@@ -203,175 +230,273 @@ export default function LandingPage() {
     }
   }
 
+  // Style for the Patient / Doctor cards
+  function roleCardClass(active: boolean) {
+    return `flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-3 text-sm font-medium transition-all duration-200 active:scale-[0.98] ${
+      active
+        ? 'border-[#3FA9D6] bg-gradient-to-br from-[#3FA9D6]/10 to-[#4FBE8E]/10 text-[#0D3B3E] shadow-sm'
+        : 'border-[#E3DFD3] bg-white/70 text-[#7A8079] hover:border-[#3FA9D6]/50 hover:-translate-y-0.5'
+    }`
+  }
+
   // ============================================================
   // RENDER
   // ============================================================
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#EFEEE6] flex flex-col items-center justify-between px-6 py-10">
-      {/* ---------------- BACKGROUND — floating gradient blobs ---------------- */}
-      <div className="pointer-events-none absolute -top-40 -left-32 w-[500px] h-[500px] rounded-full bg-[#0D3B3E] opacity-30 blur-3xl animate-[drift1_18s_ease-in-out_infinite]" />
-      <div className="pointer-events-none absolute top-1/4 -right-40 w-[480px] h-[480px] rounded-full bg-[#E8734A] opacity-25 blur-3xl animate-[drift2_22s_ease-in-out_infinite]" />
-      <div className="pointer-events-none absolute bottom-[-80px] left-1/4 w-[420px] h-[420px] rounded-full bg-[#5FA89B] opacity-30 blur-3xl animate-[drift1_20s_ease-in-out_infinite]" />
-      <div className="pointer-events-none absolute top-1/2 left-1/2 w-72 h-72 rounded-full bg-[#F2C14E] opacity-[0.18] blur-3xl animate-[drift2_16s_ease-in-out_infinite]" />
+    <div className="relative min-h-screen overflow-hidden bg-[#EFEEE6]">
+      {/* Animations live here so this page does not depend on globals.css */}
+      <style>{`
+        @keyframes sd-drift1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(45px,30px) scale(1.08); } }
+        @keyframes sd-drift2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-45px,-28px) scale(1.1); } }
+        @keyframes sd-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) { .sd-anim { animation: none !important; } }
+      `}</style>
 
-      {/* ---------------- MAIN CARD — title + form ---------------- */}
-      <div className="relative w-full max-w-110 flex-1 flex flex-col justify-center animate-[fadeInUp_0.6s_ease-out]">
-        {/* --- Title / branding --- */}
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0D3B3E" strokeWidth="1.8">
-            <path d="M3 12h4l2 7 4-14 2 7h6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <h1 className="font-serif text-4xl text-[#0D3B3E] text-center">SuggestDoc</h1>
-        </div>
-        <p className="text-[#7A8079] text-center text-sm mb-8">
-          Find the right doctor, without the guesswork.
-        </p>
+      {/* ---------------- BACKGROUND — same four glows as the home page ---------------- */}
+      <div className="sd-anim pointer-events-none absolute -top-40 -left-32 w-[600px] h-[600px] rounded-full bg-[#3FA9D6] opacity-20 blur-3xl animate-[sd-drift1_18s_ease-in-out_infinite]" />
+      <div className="sd-anim pointer-events-none absolute top-1/3 -right-40 w-[550px] h-[550px] rounded-full bg-[#4FBE8E] opacity-20 blur-3xl animate-[sd-drift2_22s_ease-in-out_infinite]" />
+      <div className="sd-anim pointer-events-none absolute bottom-[-100px] left-1/3 w-[500px] h-[500px] rounded-full bg-[#F2C14E] opacity-[0.15] blur-3xl animate-[sd-drift1_20s_ease-in-out_infinite]" />
+      <div className="sd-anim pointer-events-none absolute top-10 right-1/4 w-[350px] h-[350px] rounded-full bg-[#E8734A] opacity-[0.12] blur-3xl animate-[sd-drift2_16s_ease-in-out_infinite]" />
 
-        {/* --- Glass form card --- */}
-        <div className="rounded-2xl bg-white/70 backdrop-blur-md shadow-[0_8px_30px_rgba(13,59,62,0.12)] border border-white/60 p-6">
-          {/* --- Sign Up / Sign In sliding toggle --- */}
-          <div className="relative flex bg-[#EFECE4] rounded-full p-1 mb-6">
-            <div
-              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-[#0D3B3E] transition-transform duration-300 ease-out ${
-                mode === 'signup' ? 'translate-x-0' : 'translate-x-[calc(100%+8px)]'
-              }`}
-            />
-            <button
-              type="button"
-              onClick={() => setMode('signup')}
-              className={`relative z-10 flex-1 py-2 rounded-full text-sm font-medium transition-colors ${
-                mode === 'signup' ? 'text-white' : 'text-[#0D3B3E]'
-              }`}
-            >
-              Sign Up
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('signin')}
-              className={`relative z-10 flex-1 py-2 rounded-full text-sm font-medium transition-colors ${
-                mode === 'signin' ? 'text-white' : 'text-[#0D3B3E]'
-              }`}
-            >
-              Sign In
-            </button>
+      <div className="relative max-w-6xl mx-auto px-6 py-10 min-h-screen flex flex-col">
+        {/* ---------------- MAIN — brand panel (desktop) + form ---------------- */}
+        <div className="flex-1 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          {/* ===== LEFT: brand panel, desktop only ===== */}
+          <div className="hidden lg:flex flex-col gap-8 animate-[sd-fade-up_0.6s_ease-out]">
+            <div className="flex flex-col items-start gap-4">
+              <Wordmark large />
+              <p className="text-xl text-[#5C6B6F] max-w-md leading-snug">
+                Find the right doctor, without the guesswork.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 max-w-md">
+              <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-[0_4px_16px_rgba(13,59,62,0.06)]">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3FA9D6] to-[#4FBE8E] flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="M21 21l-4.3-4.3" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <p className="text-sm text-[#2A2A28]">Pick a symptom and see which doctors can help</p>
+              </div>
+              <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-[0_4px_16px_rgba(13,59,62,0.06)]">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3FA9D6] to-[#4FBE8E] flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z" />
+                    <circle cx="12" cy="10" r="2.5" />
+                  </svg>
+                </div>
+                <p className="text-sm text-[#2A2A28]">Choose your district, then call or get directions in one tap</p>
+              </div>
+              <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-[0_4px_16px_rgba(13,59,62,0.06)]">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3FA9D6] to-[#4FBE8E] flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 3" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <p className="text-sm text-[#2A2A28]">Join a live queue at clinics that offer digital tokens</p>
+              </div>
+            </div>
           </div>
 
-          {/* --- Form --- */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            {/* Fields only shown during SIGN UP */}
-            {mode === 'signup' && (
-              <>
-                {/* Role dropdown */}
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as Role)}
-                  className="w-full px-4 py-3 rounded-lg border border-[#D8D4C8] bg-white text-[#2A2A28] text-sm outline-none focus:border-[#0D3B3E] transition-colors"
+          {/* ===== RIGHT: form ===== */}
+          <div className="w-full max-w-md mx-auto lg:mx-0 lg:justify-self-center animate-[sd-fade-up_0.6s_ease-out]">
+            {/* Mobile / tablet header (the brand panel is hidden here) */}
+            <div className="lg:hidden mb-6 flex flex-col items-center gap-2">
+              <Wordmark />
+              <p className="text-[#7A8079] text-center text-sm">
+                Find the right doctor, without the guesswork.
+              </p>
+            </div>
+
+            {/* --- Form card --- */}
+            <div className="rounded-2xl bg-white/80 backdrop-blur-md shadow-[0_8px_30px_rgba(13,59,62,0.12)] border border-white/70 p-6">
+              {/* --- Sign Up / Sign In sliding toggle --- */}
+              <div className="relative flex bg-[#EFECE4] rounded-full p-1 mb-5">
+                <div
+                  className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-[#3FA9D6] to-[#4FBE8E] shadow-sm transition-transform duration-300 ease-out ${
+                    mode === 'signup' ? 'translate-x-0' : 'translate-x-[calc(100%+8px)]'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMode('signup')}
+                  className={`relative z-10 flex-1 py-2 rounded-full text-sm font-medium transition-colors ${
+                    mode === 'signup' ? 'text-white' : 'text-[#0D3B3E]'
+                  }`}
                 >
-                  <option value="patient">Patient</option>
-                  <option value="doctor">Doctor</option>
-                </select>
+                  Sign Up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('signin')}
+                  className={`relative z-10 flex-1 py-2 rounded-full text-sm font-medium transition-colors ${
+                    mode === 'signin' ? 'text-white' : 'text-[#0D3B3E]'
+                  }`}
+                >
+                  Sign In
+                </button>
+              </div>
 
-                {/* Name + phone (shared by both roles) */}
-                <input
-                  type="text"
-                  placeholder="Full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 rounded-lg border border-[#D8D4C8] bg-white text-[#2A2A28] text-sm outline-none focus:border-[#0D3B3E] transition-colors"
-                />
-                <input
-                  type="tel"
-                  placeholder="Phone number"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 rounded-lg border border-[#D8D4C8] bg-white text-[#2A2A28] text-sm outline-none focus:border-[#0D3B3E] transition-colors"
-                />
+              <div className="mb-4">
+                <h2 className="font-serif text-2xl font-bold text-[#0D3B3E]">
+                  {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+                </h2>
+                <p className="text-sm text-[#7A8079] mt-0.5">
+                  {mode === 'signup'
+                    ? 'It only takes a minute.'
+                    : 'Sign in to continue.'}
+                </p>
+              </div>
 
-                {/* Doctor-only extra fields */}
-                {role === 'doctor' && (
-                  <div className="animate-[fadeInUp_0.3s_ease-out] flex flex-col gap-3">
+              {/* --- Form --- */}
+              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                {/* Fields only shown during SIGN UP */}
+                {mode === 'signup' && (
+                  <>
+                    {/* Role cards */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setRole('patient')}
+                        className={roleCardClass(role === 'patient')}
+                      >
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <circle cx="12" cy="8" r="4" />
+                          <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" strokeLinecap="round" />
+                        </svg>
+                        Patient
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRole('doctor')}
+                        className={roleCardClass(role === 'doctor')}
+                      >
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <rect x="3" y="5" width="18" height="15" rx="3" />
+                          <path d="M12 9v7M8.5 12.5h7" strokeLinecap="round" />
+                        </svg>
+                        Doctor
+                      </button>
+                    </div>
+
+                    {/* Name + phone (shared by both roles) */}
                     <input
                       type="text"
-                      placeholder="Qualifications (e.g. MBBS, MD)"
-                      value={qualifications}
-                      onChange={(e) => setQualifications(e.target.value)}
+                      placeholder="Full name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                       required
-                      className="w-full px-4 py-3 rounded-lg border border-[#D8D4C8] bg-white text-[#2A2A28] text-sm outline-none focus:border-[#0D3B3E] transition-colors"
+                      className={inputClass}
                     />
-                    <label className="w-full px-4 py-3 rounded-lg border border-dashed border-[#B7C4BC] bg-[#F4F7F5] text-sm text-[#2A2A28] cursor-pointer flex items-center justify-between hover:border-[#0D3B3E] transition-colors">
-                      <span className="truncate">
-                        {certFile ? certFile.name : 'Upload certification / license (PDF)'}
-                      </span>
-                      <input
-                        type="file"
-                        accept="application/pdf"
-                        onChange={(e) =>
-                          setCertFile(e.target.files ? e.target.files[0] : null)
-                        }
-                        className="hidden"
-                      />
-                    </label>
-                    <p className="text-xs text-[#9CA39C]">
-                      Your account will be reviewed and verified by an admin
-                      before it becomes active.
-                    </p>
-                  </div>
+                    <input
+                      type="tel"
+                      placeholder="Phone number"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required
+                      className={inputClass}
+                    />
+
+                    {/* Doctor-only extra fields */}
+                    {role === 'doctor' && (
+                      <div className="animate-[sd-fade-up_0.3s_ease-out] flex flex-col gap-3">
+                        <input
+                          type="text"
+                          placeholder="Qualifications (e.g. MBBS, MD)"
+                          value={qualifications}
+                          onChange={(e) => setQualifications(e.target.value)}
+                          required
+                          className={inputClass}
+                        />
+                        <label className="w-full px-4 py-3 rounded-xl border-2 border-dashed border-[#3FA9D6]/40 bg-[#3FA9D6]/5 text-sm text-[#2A2A28] cursor-pointer flex items-center justify-between gap-2 hover:border-[#3FA9D6] hover:bg-[#3FA9D6]/10 transition">
+                          <span className="truncate">
+                            {certFile ? certFile.name : 'Upload certification / license (PDF)'}
+                          </span>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3FA9D6" strokeWidth="2" className="flex-shrink-0">
+                            <path d="M12 16V4M7 9l5-5 5 5M4 20h16" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            onChange={(e) =>
+                              setCertFile(e.target.files ? e.target.files[0] : null)
+                            }
+                            className="hidden"
+                          />
+                        </label>
+                        <p className="text-xs text-[#7A8079] bg-[#FFF6DD] rounded-lg px-3 py-2">
+                          Your account will be reviewed and verified by an admin
+                          before it becomes active.
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
-              </>
-            )}
 
-            {/* Email + password — shown in BOTH sign up and sign in */}
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 rounded-lg border border-[#D8D4C8] bg-white text-[#2A2A28] text-sm outline-none focus:border-[#0D3B3E] transition-colors"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-4 py-3 rounded-lg border border-[#D8D4C8] bg-white text-[#2A2A28] text-sm outline-none focus:border-[#0D3B3E] transition-colors"
-            />
+                {/* Email + password — shown in BOTH sign up and sign in */}
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className={inputClass}
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className={inputClass}
+                />
 
-            {/* Error message */}
-            {error && <p className="text-sm text-[#B3402A]">{error}</p>}
+                {/* Error message */}
+                {error && (
+                  <p className="text-sm text-[#B3402A] bg-[#FDEAE6] rounded-lg px-3 py-2">
+                    {error}
+                  </p>
+                )}
 
-            {/* Submit button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-lg bg-[#E8734A] text-white font-medium text-sm mt-2 shadow-[0_4px_14px_rgba(232,115,74,0.35)] hover:brightness-105 active:scale-[0.99] transition disabled:opacity-60"
-            >
-              {loading ? 'Please wait...' : mode === 'signup' ? 'Create account' : 'Sign in'}
-            </button>
-          </form>
+                {/* Submit button */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#3FA9D6] to-[#4FBE8E] text-white font-medium text-sm mt-1 shadow-[0_6px_18px_rgba(63,169,214,0.35)] hover:brightness-105 hover:-translate-y-0.5 active:scale-[0.99] transition disabled:opacity-60 disabled:hover:translate-y-0"
+                >
+                  {loading ? 'Please wait...' : mode === 'signup' ? 'Create account' : 'Sign in'}
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* ---------------- FOOTER — disclaimer + creator credit ---------------- */}
-      <div className="relative w-full max-w-110 pt-8 mt-8 border-t border-[#D8D4C8] text-center">
-        <p className="text-xs text-[#7A8079] mb-4">
-          This is not a diagnosis. SuggestDoc only helps you identify the
-          right type of doctor to consult.
-        </p>
-        <div className="flex flex-col items-center gap-1">
-          <Image
-            src="/dp2.png"
-            alt="Nilesh Sillare"
-            width={80}
-            height={80}
-            className="w-20 h-20 rounded-full object-cover shadow-md"
-          />
-          <p className="text-sm font-medium text-[#2A2A28]">Nilesh Sillare</p>
-          <p className="text-xs text-[#9CA39C]">Creator &amp; Developer</p>
+        {/* ---------------- FOOTER — same style as the home page ---------------- */}
+        <div className="w-full max-w-xl mx-auto pt-10 mt-10 text-center">
+          <p className="text-xs text-[#B3402A] bg-[#FDEAE6] rounded-xl px-4 py-3 mb-4">
+            <span className="font-semibold">Important Disclaimer:</span> SuggestDoc is for
+            guidance only, not medical advice. Please consult a licensed doctor for proper
+            diagnosis and treatment.
+          </p>
+          <p className="text-xs text-[#7A8079] mb-4">
+            Made with <span className="text-[#E8734A]">&hearts;</span> for the people of Maharashtra
+          </p>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-xs text-[#9CA39C]">Created by</p>
+            <Image
+              src="/dp2.png"
+              alt="Nilesh Sillare"
+              width={80}
+              height={80}
+              className="w-20 h-20 rounded-full object-cover shadow-md"
+            />
+            <p className="text-sm font-medium text-[#2A2A28]">Nilesh Sillare</p>
+            <p className="text-xs text-[#9CA39C]">Creator &amp; Developer</p>
+          </div>
         </div>
       </div>
     </div>
