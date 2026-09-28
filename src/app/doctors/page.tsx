@@ -11,6 +11,8 @@ import { supabase } from '@/lib/supabaseClient'
 // ============================================================
 // TYPES
 // ============================================================
+// NOTE: doctor_public now returns ONE ROW PER DOCTOR PER SPECIALTY,
+// so a doctor with two specialties can arrive as two rows (same id).
 type Doctor = {
   id: string
   name: string | null
@@ -49,15 +51,17 @@ function callUrl(phone: string | null) {
   return phone ? 'tel:' + phone : undefined
 }
 
-// GP-first, then remaining specialties alphabetically
+// GP-first, then remaining names alphabetically
+function compareSpecialtyNames(a: string, b: string) {
+  const aGP = a === 'General Physician'
+  const bGP = b === 'General Physician'
+  if (aGP && !bGP) return -1
+  if (bGP && !aGP) return 1
+  return a.localeCompare(b)
+}
+
 function orderSpecialties(specialties: Specialty[]) {
-  return [...specialties].sort((a, b) => {
-    const aGP = a.name === 'General Physician'
-    const bGP = b.name === 'General Physician'
-    if (aGP && !bGP) return -1
-    if (bGP && !aGP) return 1
-    return a.name.localeCompare(b.name)
-  })
+  return [...specialties].sort((a, b) => compareSpecialtyNames(a.name, b.name))
 }
 
 function PickDoctorContent() {
@@ -105,17 +109,30 @@ function PickDoctorContent() {
   }, [specialtyParam, city])
 
   const orderedSpecialties = orderSpecialties(specialties)
+
+  // Every matching specialty name for each doctor (used for the pills on the card)
+  const namesById = new Map<string, string[]>()
+  doctors.forEach((d) => {
+    const list = namesById.get(d.id) ?? []
+    if (!list.includes(d.specialty_name)) list.push(d.specialty_name)
+    namesById.set(d.id, list)
+  })
+
+  // Each doctor appears ONCE: under the first matching group (GP first, then A-Z)
+  const placed = new Set<string>()
   const groups = orderedSpecialties
     .map((s) => {
       const groupDoctors = doctors
-        .filter((d) => d.specialty_id === s.id)
+        .filter((d) => d.specialty_id === s.id && !placed.has(d.id))
         .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
+      groupDoctors.forEach((d) => placed.add(d.id))
       return { specialty: s, doctors: groupDoctors }
     })
     .filter((g) => g.doctors.length > 0)
 
   const specialtyText = joinNames(specialties.map((s) => s.name))
-  const totalCount = doctors.length
+  // Count unique doctors, not rows
+  const totalCount = new Set(doctors.map((d) => d.id)).size
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#EFEEE6]">
@@ -198,7 +215,13 @@ function PickDoctorContent() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {group.doctors.map((d) => (
-                      <DoctorCard key={d.id} doctor={d} />
+                      <DoctorCard
+                        key={d.id}
+                        doctor={d}
+                        specialtyNames={[...(namesById.get(d.id) ?? [d.specialty_name])].sort(
+                          compareSpecialtyNames
+                        )}
+                      />
                     ))}
                   </div>
                 </div>
@@ -243,7 +266,13 @@ function StarIcon() {
 // ============================================================
 // DOCTOR CARD
 // ============================================================
-function DoctorCard({ doctor }: { doctor: Doctor }) {
+function DoctorCard({
+  doctor,
+  specialtyNames,
+}: {
+  doctor: Doctor
+  specialtyNames: string[]
+}) {
   const d = doctor
   // Supabase returns Postgres "numeric" columns as strings, not JS numbers — convert explicitly
   const ratingNum = d.rating != null ? Number(d.rating) : null
@@ -256,7 +285,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
 
   return (
     <div className="group relative bg-white rounded-2xl shadow-[0_4px_16px_rgba(13,59,62,0.08)] hover:shadow-[0_14px_36px_rgba(13,59,62,0.16)] hover:-translate-y-1 transition-all duration-200 p-5 flex flex-col gap-3 overflow-hidden">
-      {/* soft corner glow, only visible on hover — the "dynamic" touch */}
+      {/* soft corner glow, only visible on hover */}
       <div className="pointer-events-none absolute -top-10 -right-10 w-28 h-28 rounded-full bg-gradient-to-br from-[#3FA9D6] to-[#4FBE8E] opacity-0 group-hover:opacity-10 blur-2xl transition-opacity duration-300" />
 
       <div className="flex items-start justify-between gap-3">
@@ -271,9 +300,17 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
         ) : null}
       </div>
 
-      <span className="self-start bg-gradient-to-r from-[#3FA9D6] to-[#4FBE8E] text-white text-xs font-medium rounded-full px-3 py-1 shadow-sm">
-        {d.specialty_name}
-      </span>
+      {/* One pill per matching specialty */}
+      <div className="flex flex-wrap gap-1.5">
+        {specialtyNames.map((name) => (
+          <span
+            key={name}
+            className="bg-gradient-to-r from-[#3FA9D6] to-[#4FBE8E] text-white text-xs font-medium rounded-full px-3 py-1 shadow-sm"
+          >
+            {name}
+          </span>
+        ))}
+      </div>
 
       {d.clinic_name || d.clinic_address ? (
         <div className="flex items-start gap-1.5">
