@@ -16,7 +16,7 @@ type Role = 'patient' | 'doctor'
 
 // Where each role lands after login
 function homeFor(role: string | null | undefined) {
-  return role === 'doctor' ? '/doctor/profile' : '/home'
+  return role === 'doctor' ? '/doctor/dashboard' : '/home'
 }
 
 // Shared look for all text inputs
@@ -501,4 +501,4 @@ export default function LandingPage() {
       </div>
     </div>
   )
-}
+}  
