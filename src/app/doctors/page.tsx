@@ -3,10 +3,11 @@
 // ============================================================
 // IMPORTS
 // ============================================================
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import ReviewsPanel from '@/components/ReviewsPanel'
 
 // ============================================================
 // TYPES
@@ -27,6 +28,7 @@ type Doctor = {
   current_token_number: number | null
   rating: number | string | null
   rating_count: number | string | null
+  comments_enabled: boolean | null
   clinic_name: string | null
   clinic_address: string | null
   city: string | null
@@ -74,6 +76,11 @@ function PickDoctorContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  // Reviews: which doctor's panel is open, and a counter to refresh the list
+  const [reviewTarget, setReviewTarget] = useState<Doctor | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const silentRef = useRef(false) // true = refresh without the loading spinner
+
   useEffect(() => {
     const ids = specialtyParam.split(',').filter(Boolean)
     if (ids.length === 0) {
@@ -82,7 +89,10 @@ function PickDoctorContent() {
     }
 
     async function load() {
-      setLoading(true)
+      const silent = silentRef.current
+      silentRef.current = false
+
+      if (!silent) setLoading(true)
       setError('')
 
       const { data: sp, error: spError } = await supabase
@@ -106,7 +116,13 @@ function PickDoctorContent() {
       setLoading(false)
     }
     load()
-  }, [specialtyParam, city])
+  }, [specialtyParam, city, reloadKey])
+
+  // Called by the reviews panel after a review is saved or deleted
+  function refreshRatings() {
+    silentRef.current = true
+    setReloadKey((k) => k + 1)
+  }
 
   const orderedSpecialties = orderSpecialties(specialties)
 
@@ -221,6 +237,7 @@ function PickDoctorContent() {
                         specialtyNames={[...(namesById.get(d.id) ?? [d.specialty_name])].sort(
                           compareSpecialtyNames
                         )}
+                        onOpenReviews={() => setReviewTarget(d)}
                       />
                     ))}
                   </div>
@@ -230,6 +247,18 @@ function PickDoctorContent() {
           </div>
         ) : null}
       </div>
+
+      {/* Reviews slide-over (one panel for the whole page) */}
+      {reviewTarget ? (
+        <ReviewsPanel
+          open={true}
+          doctorId={reviewTarget.id}
+          doctorName={reviewTarget.name ?? 'Unnamed doctor'}
+          commentsEnabled={!!reviewTarget.comments_enabled}
+          onClose={() => setReviewTarget(null)}
+          onChanged={refreshRatings}
+        />
+      ) : null}
     </div>
   )
 }
@@ -263,20 +292,31 @@ function StarIcon() {
   )
 }
 
+function OutlineStarIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+      <path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-4-6.3 4 1.7-7-5.4-4.7 7.1-.6z" />
+    </svg>
+  )
+}
+
 // ============================================================
 // DOCTOR CARD
 // ============================================================
 function DoctorCard({
   doctor,
   specialtyNames,
+  onOpenReviews,
 }: {
   doctor: Doctor
   specialtyNames: string[]
+  onOpenReviews: () => void
 }) {
   const d = doctor
   // Supabase returns Postgres "numeric" columns as strings, not JS numbers — convert explicitly
   const ratingNum = d.rating != null ? Number(d.rating) : null
   const hasRating = ratingNum != null && !Number.isNaN(ratingNum)
+  const ratingCount = d.rating_count != null ? Number(d.rating_count) : 0
   const hasQueue =
     d.token_enabled && d.last_issued_token_number != null && d.current_token_number != null
   const queuePosition = hasQueue
@@ -293,11 +333,28 @@ function DoctorCard({
           {d.name ?? 'Unnamed doctor'}
         </p>
         {hasRating ? (
-          <span className="shrink-0 flex items-center gap-1 bg-gradient-to-r from-[#4FBE8E] to-[#3FA9D6] text-white text-xs font-semibold rounded-full px-2.5 py-1 shadow-sm">
+          <button
+            type="button"
+            onClick={onOpenReviews}
+            aria-label="See reviews"
+            className="shrink-0 flex items-center gap-1 bg-gradient-to-r from-[#4FBE8E] to-[#3FA9D6] text-white text-xs font-semibold rounded-full px-2.5 py-1 shadow-sm hover:brightness-110 active:scale-[0.97] transition"
+          >
             <StarIcon />
             {ratingNum!.toFixed(1)}
-          </span>
-        ) : null}
+            {ratingCount > 0 ? (
+              <span className="font-normal opacity-90">({ratingCount})</span>
+            ) : null}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpenReviews}
+            className="shrink-0 flex items-center gap-1 border border-[#CFC9B8] text-[#7A8B90] text-xs font-medium rounded-full px-2.5 py-1 hover:border-[#F2C14E] hover:text-[#B8892A] transition"
+          >
+            <OutlineStarIcon />
+            Rate
+          </button>
+        )}
       </div>
 
       {/* One pill per matching specialty */}
