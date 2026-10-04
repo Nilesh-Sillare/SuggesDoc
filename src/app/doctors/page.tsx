@@ -5,15 +5,13 @@
 // ============================================================
 import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import ReviewsPanel from '@/components/ReviewsPanel'
 
 // ============================================================
 // TYPES
 // ============================================================
-// NOTE: doctor_public now returns ONE ROW PER DOCTOR PER SPECIALTY,
-// so a doctor with two specialties can arrive as two rows (same id).
 type Doctor = {
   id: string
   name: string | null
@@ -36,13 +34,11 @@ type Doctor = {
 }
 type Specialty = { id: string; name: string }
 
-// "A", "A and B", "A, B and C"
 function joinNames(names: string[]) {
   if (names.length <= 1) return names.join('')
   return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1]
 }
 
-// Builds a Google Maps directions link from plain address text (no API key needed)
 function directionsUrl(d: Doctor) {
   const parts = [d.clinic_name, d.clinic_address, d.city].filter(Boolean)
   const destination = encodeURIComponent(parts.join(', '))
@@ -53,7 +49,6 @@ function callUrl(phone: string | null) {
   return phone ? 'tel:' + phone : undefined
 }
 
-// GP-first, then remaining names alphabetically
 function compareSpecialtyNames(a: string, b: string) {
   const aGP = a === 'General Physician'
   const bGP = b === 'General Physician'
@@ -76,10 +71,9 @@ function PickDoctorContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Reviews: which doctor's panel is open, and a counter to refresh the list
   const [reviewTarget, setReviewTarget] = useState<Doctor | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
-  const silentRef = useRef(false) // true = refresh without the loading spinner
+  const silentRef = useRef(false)
 
   useEffect(() => {
     const ids = specialtyParam.split(',').filter(Boolean)
@@ -118,7 +112,6 @@ function PickDoctorContent() {
     load()
   }, [specialtyParam, city, reloadKey])
 
-  // Called by the reviews panel after a review is saved or deleted
   function refreshRatings() {
     silentRef.current = true
     setReloadKey((k) => k + 1)
@@ -126,7 +119,6 @@ function PickDoctorContent() {
 
   const orderedSpecialties = orderSpecialties(specialties)
 
-  // Every matching specialty name for each doctor (used for the pills on the card)
   const namesById = new Map<string, string[]>()
   doctors.forEach((d) => {
     const list = namesById.get(d.id) ?? []
@@ -134,7 +126,6 @@ function PickDoctorContent() {
     namesById.set(d.id, list)
   })
 
-  // Each doctor appears ONCE: under the first matching group (GP first, then A-Z)
   const placed = new Set<string>()
   const groups = orderedSpecialties
     .map((s) => {
@@ -147,12 +138,10 @@ function PickDoctorContent() {
     .filter((g) => g.doctors.length > 0)
 
   const specialtyText = joinNames(specialties.map((s) => s.name))
-  // Count unique doctors, not rows
   const totalCount = new Set(doctors.map((d) => d.id)).size
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#EFEEE6]">
-      {/* Background glows, matching the home page */}
       <div className="pointer-events-none absolute -top-40 -left-32 w-[600px] h-[600px] rounded-full bg-[#3FA9D6] opacity-20 blur-3xl" />
       <div className="pointer-events-none absolute top-1/3 -right-40 w-[550px] h-[550px] rounded-full bg-[#4FBE8E] opacity-20 blur-3xl" />
       <div className="pointer-events-none absolute bottom-[-100px] left-1/3 w-[500px] h-[500px] rounded-full bg-[#F2C14E] opacity-[0.15] blur-3xl" />
@@ -169,7 +158,6 @@ function PickDoctorContent() {
           Back to search
         </Link>
 
-        {/* HEADER CARD */}
         <div className="relative z-20 bg-white/90 backdrop-blur-sm rounded-2xl shadow-[0_8px_30px_rgba(13,59,62,0.1)] p-5">
           <div className="flex items-start gap-3">
             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#3FA9D6] to-[#4FBE8E] flex items-center justify-center flex-shrink-0">
@@ -248,7 +236,6 @@ function PickDoctorContent() {
         ) : null}
       </div>
 
-      {/* Reviews slide-over (one panel for the whole page) */}
       {reviewTarget ? (
         <ReviewsPanel
           open={true}
@@ -313,7 +300,10 @@ function DoctorCard({
   onOpenReviews: () => void
 }) {
   const d = doctor
-  // Supabase returns Postgres "numeric" columns as strings, not JS numbers — convert explicitly
+  const router = useRouter()
+  const [booking, setBooking] = useState(false)
+  const [bookError, setBookError] = useState('')
+
   const ratingNum = d.rating != null ? Number(d.rating) : null
   const hasRating = ratingNum != null && !Number.isNaN(ratingNum)
   const ratingCount = d.rating_count != null ? Number(d.rating_count) : 0
@@ -323,9 +313,23 @@ function DoctorCard({
     ? (d.last_issued_token_number as number) - (d.current_token_number as number)
     : null
 
+  async function handleBook() {
+    setBooking(true)
+    setBookError('')
+
+    const { error } = await supabase.rpc('book_token', { p_doctor_id: d.id })
+
+    if (error) {
+      setBookError(error.message)
+      setBooking(false)
+      return
+    }
+
+    router.push('/my-token')
+  }
+
   return (
     <div className="group relative bg-white rounded-2xl shadow-[0_4px_16px_rgba(13,59,62,0.08)] hover:shadow-[0_14px_36px_rgba(13,59,62,0.16)] hover:-translate-y-1 transition-all duration-200 p-5 flex flex-col gap-3 overflow-hidden">
-      {/* soft corner glow, only visible on hover */}
       <div className="pointer-events-none absolute -top-10 -right-10 w-28 h-28 rounded-full bg-gradient-to-br from-[#3FA9D6] to-[#4FBE8E] opacity-0 group-hover:opacity-10 blur-2xl transition-opacity duration-300" />
 
       <div className="flex items-start justify-between gap-3">
@@ -357,7 +361,6 @@ function DoctorCard({
         )}
       </div>
 
-      {/* One pill per matching specialty */}
       <div className="flex flex-wrap gap-1.5">
         {specialtyNames.map((name) => (
           <span
@@ -397,6 +400,10 @@ function DoctorCard({
         </p>
       ) : null}
 
+      {bookError ? (
+        <p className="text-xs text-[#B3402A] bg-[#FDEAE6] rounded-lg px-2.5 py-1.5">{bookError}</p>
+      ) : null}
+
       <div className="flex items-center gap-2 mt-1">
         <a
           href={directionsUrl(d)}
@@ -424,10 +431,11 @@ function DoctorCard({
         {d.token_enabled ? (
           <button
             type="button"
-            className="flex items-center justify-center border border-[#E8734A] text-[#E8734A] text-sm font-medium rounded-xl px-3 py-2.5 hover:bg-[#E8734A] hover:text-white transition"
-            onClick={() => alert('Booking coming soon')}
+            onClick={handleBook}
+            disabled={booking}
+            className="flex items-center justify-center gap-1 bg-gradient-to-r from-[#3FA9D6] to-[#4FBE8E] text-white text-sm font-medium rounded-xl px-4 py-2.5 shadow-sm hover:brightness-110 active:scale-[0.98] transition disabled:opacity-60"
           >
-            Book
+            {booking ? 'Booking...' : 'Book'}
           </button>
         ) : null}
       </div>
@@ -435,7 +443,6 @@ function DoctorCard({
   )
 }
 
-// useSearchParams must sit inside a Suspense boundary or the Vercel build fails
 export default function PickDoctorPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#EFEEE6]" />}>
