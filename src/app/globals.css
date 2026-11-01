@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+html.dark {
+  color-scheme: dark;
+}
 
 :root {
   --background: #ffffff;
@@ -52,4 +57,68 @@ body {
 @keyframes drift2 {
   0%, 100% { transform: translate(0, 0); }
   50% { transform: translate(-30px, -25px); }
+}
+/* ===== SuggestDoc motion kit ===== */
+@keyframes sd-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes sd-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(30px, -40px) scale(1.1); }
+}
+@keyframes sd-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes sd-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+@keyframes sd-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(79, 190, 142, 0.5); }
+  100% { box-shadow: 0 0 0 14px rgba(79, 190, 142, 0); }
+}
+
+.sd-fade-up { animation: sd-fade-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backward; }
+.sd-float   { animation: sd-float 14s ease-in-out infinite; }
+.sd-shake   { animation: sd-shake 0.4s; }
+.sd-pulse   { animation: sd-pulse-ring 1.8s infinite; }
+
+.sd-skeleton {
+  background: linear-gradient(90deg, #e7e6dc 25%, #f4f3ec 50%, #e7e6dc 75%);
+  background-size: 800px 100%;
+  animation: sd-shimmer 1.4s infinite linear;
+  border-radius: 12px;
+}
+
+.sd-lift { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+.sd-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(13, 59, 62, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+body {
+  background-color: #E6F5F2;
+}
+html.dark body {
+  background-color: #071A1D;
+}
+
+/* Pulsing ring behind the navbar logo */
+@keyframes nb-ring {
+  0%   { transform: scale(1);   opacity: 0.45; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.nb-ring { animation: nb-ring 2.2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .nb-ring { animation: none; }
 }
