@@ -123,7 +123,7 @@ export default function Footer() {
           <div className="flex flex-col items-center text-center">
             <p className="mb-3 text-base text-[#A9C6C4]">Created by</p>
             <Image
-              src="/pfp.jpg"
+              src="/pfp2.png"
               alt="Nilesh Sillare"
               width={160}
               height={160}

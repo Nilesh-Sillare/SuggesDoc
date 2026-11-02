@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import ReviewsPanel from '@/components/ReviewsPanel'
+import SignInPrompt from '@/components/SignInPrompt'
 
 type Doctor = {
   id: string
@@ -28,11 +29,12 @@ type Doctor = {
 }
 type Specialty = { id: string; name: string }
 type Sort = 'name' | 'rating'
+type Prompt = { action: 'book' | 'rate'; doctorName: string }
 
 const GP = 'General Physician'
-const EMERGENCY = ['chest pain', 'shortness of breath', 'palpitations']
+const EMERGENCY = ['chest pain', 'shortness of breath', 'heartache']
 const card =
-  'rounded-3xl border border-white/80 bg-white/80 shadow-[0_16px_50px_rgba(13,59,62,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0C2226]/85 dark:shadow-[0_16px_50px_rgba(0,0,0,0.45)]'
+  'rounded-3xl border border-white/80 bg-white/85 shadow-[0_16px_50px_rgba(13,59,62,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0C2226]/85 dark:shadow-[0_16px_50px_rgba(0,0,0,0.45)]'
 const muted = 'text-[#5C6B6F] dark:text-[#A9C6C4]'
 const soft = 'text-[#7A8B90] dark:text-[#8FA8A6]'
 // General Physician = green, every specialist = blue
@@ -58,15 +60,7 @@ function Icon({
   className?: string
 }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      className={className}
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
       {children}
     </svg>
   )
@@ -108,6 +102,7 @@ function PickDoctorContent() {
   const [tokenOnly, setTokenOnly] = useState(false)
 
   const [reviewTarget, setReviewTarget] = useState<Doctor | null>(null)
+  const [prompt, setPrompt] = useState<Prompt | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const silentRef = useRef(false)
 
@@ -250,7 +245,7 @@ function PickDoctorContent() {
 
         {isGuest && (
           <div className="dp-rise flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#2E8B9E]/20 bg-white/70 px-4 py-3 text-sm text-[#0D3B3E] backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-[#CDE9E6]">
-            <span>You are browsing as a guest. Sign in to book a token.</span>
+            <span>You are browsing as a guest. Sign in to book a token or rate a doctor.</span>
             <Link
               href="/?mode=signin"
               className="rounded-full bg-gradient-to-r from-[#2E8B9E] to-[#4FBE8E] px-4 py-1.5 text-xs font-medium text-white transition hover:brightness-105"
@@ -259,7 +254,8 @@ function PickDoctorContent() {
             </Link>
           </div>
         )}
-                {emergency && (
+
+        {emergency && (
           <div
             role="alert"
             className="dp-rise flex items-start gap-3 rounded-2xl border border-[#E8734A]/40 bg-[#FDEDE6] px-4 py-3 text-sm text-[#9A3B1B] dark:bg-[#3A2218] dark:text-[#FFB59A]"
@@ -275,6 +271,7 @@ function PickDoctorContent() {
             </span>
           </div>
         )}
+
         {/* Header card */}
         <div className={`${card} dp-rise relative z-20 overflow-hidden p-5 md:p-6`}>
           <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#2E8B9E] via-[#4FBE8E] to-[#3FA9D6]" />
@@ -474,6 +471,9 @@ function PickDoctorContent() {
                             compareSpecialtyNames
                           )}
                           onOpenReviews={() => setReviewTarget(d)}
+                          onNeedSignIn={(action) =>
+                            setPrompt({ action, doctorName: d.name ?? 'this doctor' })
+                          }
                         />
                       ))}
                     </div>
@@ -484,6 +484,14 @@ function PickDoctorContent() {
           </div>
         ) : null}
       </div>
+
+      {/* Friendly "please sign in" popup for guests */}
+      <SignInPrompt
+        open={!!prompt}
+        action={prompt?.action ?? 'book'}
+        doctorName={prompt?.doctorName}
+        onClose={() => setPrompt(null)}
+      />
 
       {reviewTarget ? (
         <ReviewsPanel
@@ -503,12 +511,14 @@ function DoctorCard({
   doctor: d,
   specialtyNames,
   onOpenReviews,
+  onNeedSignIn,
   isGuest,
   index,
 }: {
   doctor: Doctor
   specialtyNames: string[]
   onOpenReviews: () => void
+  onNeedSignIn: (action: 'book' | 'rate') => void
   isGuest: boolean | null
   index: number
 }) {
@@ -574,7 +584,7 @@ function DoctorCard({
         ) : (
           <button
             type="button"
-            onClick={onOpenReviews}
+            onClick={() => (isGuest ? onNeedSignIn('rate') : onOpenReviews())}
             className="flex shrink-0 items-center gap-1 rounded-full border border-[#CFC9B8] px-2.5 py-1 text-xs font-medium text-[#7A8B90] transition hover:border-[#F2C14E] hover:text-[#B8892A] dark:border-white/20 dark:text-[#A9C6C4] dark:hover:text-[#F2C14E]"
           >
             <Icon size={12}>
@@ -667,17 +677,19 @@ function DoctorCard({
           ) : null}
         </div>
 
+        {/* Guests get the Book button too; tapping it opens the sign-in popup */}
         {d.token_enabled && isGuest === true ? (
-          <Link
-            href="/?mode=signin"
-            className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-[#2E8B9E]/40 py-2 text-sm font-medium text-[#2E8B9E] transition hover:border-[#2E8B9E] hover:bg-[#2E8B9E] hover:text-white active:scale-[0.98] dark:border-[#4FBE8E]/40 dark:text-[#6FE3B2] dark:hover:bg-[#4FBE8E] dark:hover:text-[#071A1D]"
+          <button
+            type="button"
+            onClick={() => onNeedSignIn('book')}
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#4FBE8E] to-[#2E8B9E] py-2.5 text-sm font-medium text-white shadow-sm transition hover:brightness-110 active:scale-[0.98]"
           >
             <Icon>
               <rect x="5" y="11" width="14" height="9" rx="2.5" />
               <path d="M8 11V8a4 4 0 0 1 8 0v3" strokeLinecap="round" />
             </Icon>
-            Sign in to book a token
-          </Link>
+            Book a token
+          </button>
         ) : null}
 
         {d.token_enabled && isGuest === false ? (
